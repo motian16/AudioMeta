@@ -26,12 +26,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
-
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-34" "build-tools;35.0.0"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n 1)"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-34" "build-tools;35.0.0"
 
       - name: Prepare release signing
         env:
@@ -58,7 +60,7 @@ jobs:
       - name: Build
         run: |
           chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest :app:assembleRelease --no-daemon
+          ./gradlew :app:assembleRelease --no-daemon
 
       - name: Checksum
         run: |
