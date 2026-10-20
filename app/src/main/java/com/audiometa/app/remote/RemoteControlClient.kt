@@ -881,7 +881,9 @@ class RemoteControlClient(
                     id = json.optString("id"),
                     lyricLine = json.optString("lyric"),
                     // 插件 1.5+（协议 v2）才有；旧插件没有这个键，取 0 走本机时长。
-                    durationMs = json.optLong("duration", 0L)
+                    durationMs = json.optLong("duration", 0L),
+                    // 让界面/组件从这个时刻开始本地走秒，而不是等下一秒 state。
+                    positionUpdatedAt = System.currentTimeMillis()
                 )
                 val old = _track.value
                 // 换曲：立即丢掉上一首的 PC 封面/歌词，避免新歌先闪一下旧封面。

@@ -126,6 +126,9 @@ fun ControlScreen(
     val pcLyrics by ServiceLocator.remoteControl.pcLyrics.collectAsState()
 
     var tokenInput by remember { mutableStateOf("") }
+    // 配对码提示做成“粘性”的：连接在 Unauthorized / Connecting / Reconnecting
+    // 之间来回切时不要跟着闪，直到真正连上或用户手动关掉。
+    var pairingRequired by remember { mutableStateOf(false) }
 
     /** 当前这首歌的稳定键，用来判断界面上的匹配结果是不是这首歌的。 */
     val currentTrackKey = RemoteTrackResolver.keyOf(track)
@@ -193,8 +196,14 @@ fun ControlScreen(
         vm.applyAudioSync()
     }
 
-    val showTokenField = connection.needsToken ||
-        (lastError.contains("配对", ignoreCase = true) && !connection.isLive)
+    val showTokenField = pairingRequired && !connection.isLive
+    LaunchedEffect(connection, lastError, remote.enabled) {
+        when {
+            !remote.enabled || connection.isLive -> pairingRequired = false
+            connection.needsToken || lastError.contains("配对", ignoreCase = true) ->
+                pairingRequired = true
+        }
+    }
 
     /*
      * 电脑不在线：真正的 `Failed`（地址无效一类不会再自动恢复的硬失败）才显示，
@@ -305,14 +314,20 @@ fun ControlScreen(
 
         // 没连上时给一句"为什么"（断线原因由进程级的客户端记着）。
         // 高度固定，出现/消失不会顶动下面的播控键。
+        // 重连时不要显示"第 N 次"和每次变化的原因：N 每退避一次就变，
+        // 文字会一直跳。连接真正失败（Failed）时才把具体原因放出来。
+        val reconnecting = connection is RemoteConnectionState.Reconnecting
+        val connectionText = if (reconnecting) "正在重连…" else connection.label
         ConnectionNoticeBar(
             // 已经显示「电脑不在线」那条时不再重复同一句话（两行红字会互相抢注意力）。
             text = if (connection.isLive || !track.hasTrack || showOffline) {
                 ""
+            } else if (reconnecting) {
+                connectionText
             } else if (notice.isBlank()) {
-                connection.label
+                connectionText
             } else {
-                connection.label + "：" + notice
+                connectionText + "：" + notice
             }
         )
 
@@ -326,20 +341,6 @@ fun ControlScreen(
             onNext = { vm.remoteNext() }
         )
 
-        if (showTokenField) {
-            Spacer(Modifier.height(10.dp))
-            TokenPrompt(
-                value = tokenInput,
-                onValueChange = { tokenInput = it },
-                error = lastError.takeIf { !connection.isLive && it.isNotBlank() }.orEmpty(),
-                onConfirm = {
-                    vm.setRemoteToken(tokenInput)
-                    vm.refreshRemote()
-                },
-                onOpenSettings = onOpenRemoteSettings
-            )
-        }
-
         if (showOffline) {
             Spacer(Modifier.height(10.dp))
             OfflineBar(
@@ -347,6 +348,25 @@ fun ControlScreen(
                 onRetry = { vm.refreshRemote() }
             )
         }
+    }
+
+    if (showTokenField) {
+        TokenPrompt(
+            value = tokenInput,
+            onValueChange = { tokenInput = it },
+            error = lastError.takeIf { !connection.isLive && it.isNotBlank() }.orEmpty(),
+            onConfirm = {
+                vm.setRemoteToken(tokenInput)
+                vm.refreshRemote()
+                // 先收起；如果配对码不对，下一次 Unauthorized/错误会把它重新打开。
+                pairingRequired = false
+            },
+            onOpenSettings = {
+                pairingRequired = false
+                onOpenRemoteSettings()
+            },
+            onDismiss = { pairingRequired = false }
+        )
     }
 }
 
@@ -942,56 +962,65 @@ private fun tintFor(enabled: Boolean) = if (enabled) {
     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
 }
 
-/** 配对码输入。只在插件要求配对时出现。 */
+/**
+ * 配对码输入。
+ *
+ * 用 Dialog 而不是页面里的条件块：条件块出现/消失会把整页顶动，
+ * 连接在 Unauthorized / Connecting / Reconnecting 之间切换时就表现为“闪”。
+ */
 @Composable
 private fun TokenPrompt(
     value: String,
     onValueChange: (String) -> Unit,
     error: String,
     onConfirm: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-            .padding(14.dp)
-    ) {
-        Text(
-            "需要配对码",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            "配对码在电脑上：Salt Player → 插件配置 → 远程遥控 → 配对码。",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-        )
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text("配对码") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (error.isNotBlank()) {
-            Text(
-                error,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
         ) {
-            TextButton(onClick = onConfirm, enabled = value.isNotBlank()) { Text("连接") }
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onOpenSettings) { Text("打开网络遥控设置") }
+            Column(Modifier.fillMaxWidth().padding(20.dp)) {
+                Text(
+                    "需要配对码",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    "配对码在电脑上：Salt Player → 插件配置 → 远程遥控 → 配对码。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 10.dp)
+                )
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    label = { Text("配对码") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error.isNotBlank()) {
+                    Text(
+                        error,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) { Text("稍后") }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onOpenSettings) { Text("设置") }
+                    TextButton(onClick = onConfirm, enabled = value.isNotBlank()) { Text("连接") }
+                }
+            }
         }
     }
 }

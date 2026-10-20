@@ -183,6 +183,19 @@ abstract class AudioMetaWidgetProvider : AppWidgetProvider() {
                             .onFailure { AppLog.w(WIDGET_TAG, "小组件自动重画失败：" + it.message) }
                     }
             }
+            // 插件正常播放时不再每秒推 state，组件进度条要靠本机每秒重画一次推进。
+            // 这是本地 RemoteViews 刷新，不走网络。
+            scope.launch {
+                while (true) {
+                    kotlinx.coroutines.delay(1000)
+                    if (ServiceLocator.remoteControl.track.value.playing &&
+                        ServiceLocator.remoteControl.state.value.isLive
+                    ) {
+                        runCatching { refreshAllInstances(appContext) }
+                            .onFailure { AppLog.w(WIDGET_TAG, "小组件进度重画失败：" + it.message) }
+                    }
+                }
+            }
         }
 
         /**
@@ -453,6 +466,19 @@ private fun lyricFrameAt(positionMs: Long, fallbackLine: String): LyricFrame {
     )
 }
 
+/**
+ * 组件上的播放位置：以最近一帧 state 为基线，按手机墙钟往前推。
+ *
+ * 插件正常播放时不再每秒发 state，所以不能直接拿 `track.positionMs` 画进度条；
+ * 收到暂停/跳转/播放结束的新 state 时会重新给基线。
+ */
+private fun widgetPosition(track: RemoteTrack, durationMs: Long): Long {
+    if (!track.playing || track.positionUpdatedAt <= 0L) return track.positionMs
+    val elapsed = (System.currentTimeMillis() - track.positionUpdatedAt).coerceAtLeast(0L)
+    val position = track.positionMs + elapsed
+    return if (durationMs > 0L) position.coerceAtMost(durationMs) else position
+}
+
 /** 按风格挑布局、按尺寸填内容、挂点击。纯内存操作，可以反复调用。 */
 private fun buildViews(
     context: Context,
@@ -466,6 +492,7 @@ private fun buildViews(
 ): RemoteViews {
     val views = RemoteViews(context.packageName, layoutRes)
     val hasTrack = track.hasTrack
+    val position = widgetPosition(track, snapshot.durationMs)
 
     // ---- 标题：没有在放的歌时显示连接状态，不让组件变成一块空白 ----
     val title = when {
@@ -485,7 +512,7 @@ private fun buildViews(
     views.setTextViewText(R.id.widget_subtitle, subtitle)
 
     // ---- 歌词 ----
-    val frame = if (hasTrack) lyricFrameAt(track.positionMs, track.lyricLine) else LyricFrame()
+    val frame = if (hasTrack) lyricFrameAt(position, track.lyricLine) else LyricFrame()
     val hasLyrics = frame.current.isNotBlank() || frame.translation.isNotBlank()
     views.setTextViewText(R.id.widget_lyric_prev, frame.previous)
     views.setTextViewText(
@@ -508,7 +535,8 @@ private fun buildViews(
     // ---- 进度条：位置来自 PC，总时长来自本机曲库匹配 ----
     // 匹配不到时长就整行收起来：宁可不显示，也不画一条永远停在 0 的假进度条。
     // 太矮（1 格高）也不显示：那一行会挤掉曲名，用户要的是"小尺寸只显示一部分"。
-    val duration = snapshot.durationMs
+    // 本机曲库匹配到的时长最准；没有时用插件协议 v2 带的 duration 兜底。
+    val duration = snapshot.durationMs.takeIf { it > 0L } ?: track.durationMs
     val showProgress = hasTrack && duration > 0L && size.tall &&
         (flavor != WidgetFlavor.COMPACT || size.wide)
     if (showProgress) {
@@ -516,12 +544,12 @@ private fun buildViews(
         views.setProgressBar(
             R.id.widget_progress,
             max,
-            track.positionMs.coerceIn(0L, duration).toInt(),
+            position.coerceIn(0L, duration).toInt(),
             false
         )
         views.setTextViewText(
             R.id.widget_time,
-            formatTime(track.positionMs) + " / " + formatTime(duration)
+            formatTime(position) + " / " + formatTime(duration)
         )
     }
     views.setViewVisibility(R.id.widget_progress_row, visibility(showProgress))

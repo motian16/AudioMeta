@@ -26,10 +26,15 @@
         android:scaleType="centerCrop"
         android:contentDescription="@string/widget_cover" />
 
-    <!-- 底部渐变：白字压在浅色封面上也看得清 -->
-    <View
+    <!-- 底部渐变：白字压在浅色封面上也看得清。
+         用 ImageView 而不是 View：RemoteViews 只保证支持带 @RemoteView 的控件，
+         纯 View 在部分桌面进程里会让整张布局 inflate 失败，表现就是
+         “Problem loading widget”。 -->
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:importantForAccessibility="no"
         android:background="@drawable/widget_scrim" />
 
     <LinearLayout

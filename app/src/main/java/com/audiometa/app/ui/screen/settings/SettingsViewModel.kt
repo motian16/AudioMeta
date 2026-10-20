@@ -1095,8 +1095,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
      * 记住"上次收到位置的时间和值"，之后每次查询按经过的墙钟时间往前推。
      * 两次推送之间位置连续增长，歌词换行看起来就是准点到的。
      *
-     * 上限 [INTERPOLATION_CAP_MS]：暂停或掉线之后不能无限往前推，
-     * 否则歌词会一路跑到歌尾。超过上限就停在"上次位置 + 上限"。
+     * 上限 [INTERPOLATION_CAP_MS]：只在正常播放时往前推。暂停、断线由调用方
+     * 停止推进；这里留一个足够长的上限，避免异常情况下无限跑。
      */
     private fun interpolatedPosition(rawPositionMs: Long): Long {
         // 位置值变了 → 这是一次新推送，重新打时间戳
@@ -1124,6 +1124,13 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
      *     （> [POSITION_JUMP_BACK_MS]，也就是跳转/换歌/重连新基线）时才松开下限。
      */
     fun positionForUi(rawPositionMs: Long, playing: Boolean): Long {
+        // 暂停→恢复：不能把暂停期间的时间算进播放进度。
+        if (playing != lastPlayingForUi) {
+            lastPlayingForUi = playing
+            lastRawPositionMs = rawPositionMs
+            lastRawPositionAt = System.currentTimeMillis()
+            lastInterpolatedMs = rawPositionMs
+        }
         /*
          * 倒退（回退超过 2 秒）一定是**真的跳了**：新连接的第一次推送、
          * 用户拖了进度条、换了一首歌。这时候单调下限必须松开，
@@ -1152,6 +1159,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         lastRawPositionAt = 0L
         lastInterpolatedMs = -1L
         lastRawForUi = -1L
+        lastPlayingForUi = false
     }
 
     // ---------------- 同步播放本地音频 ----------------
@@ -1174,6 +1182,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     /** [positionForUi] 上一次拿到的原始位置，用来识别"真的往回跳了"。 */
     private var lastRawForUi: Long = -1
+    /** [positionForUi] 上一次的播放状态：暂停→恢复时重置插值基线。 */
+    private var lastPlayingForUi: Boolean = false
 
     private companion object {
         /** 远程控制相关日志的 tag，和 ServiceLocator 那一侧保持一致。 */
@@ -1207,7 +1217,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
          * 1200ms 略大于宿主的推送间隔（1 秒）：正常推送时插值始终落在这个范围内；
          * 推送一停（暂停/掉线）最多再往前推 1.2 秒就定住，不会一路跑到歌尾。
          */
-        const val INTERPOLATION_CAP_MS = 1_200L
+        // 插件不再每秒确认进度，正常播放靠本地时钟推进；6 小时足够覆盖单曲，
+        // 又不至于在异常情况下让进度跑到无穷大。
+        const val INTERPOLATION_CAP_MS = 6 * 60 * 60 * 1000L
 
         /**
          * 原始位置一次往回掉这么多毫秒，就当成"真的跳了"（换歌/跳转/重连后的新基线），

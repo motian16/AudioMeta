@@ -286,7 +286,14 @@ data class RemoteTrack(
     /** 当前歌词行的纯文本，来自 `onLyricsLineUpdated`。没有歌词时为空。 */
     val lyricLine: String = "",
     /** PC 侧曲目总时长（毫秒）；0 表示旧宿主/旧插件没提供。 */
-    val durationMs: Long = 0L
+    val durationMs: Long = 0L,
+    /**
+     * 收到这条 positionMs 的手机墙钟时刻。
+     *
+     * 插件正常播放时不再每秒推 state，进度由客户端从这一帧本地推进
+     * （见 SettingsViewModel.positionForUi / 桌面组件）。
+     */
+    val positionUpdatedAt: Long = 0L
 ) {
     val hasTrack: Boolean get() = title.isNotBlank() || path.isNotBlank()
 
