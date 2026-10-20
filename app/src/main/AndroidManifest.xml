@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+
+    <!--
+        Android 11+ 的包可见性：不声明 <queries> 的话，
+        getPackageInfo / queryIntentActivities 看不到别的应用，
+        「关于」页就永远判断不出手机里有没有 QQ 和邮件客户端。
+
+        注意这里只是"允许我们看见它们"，不涉及别的应用看见我们 ——
+        范围也只列了实际要用的两种 intent 和两个包，不再是 <queries> 全开。
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <!-- QQ：加群直接调它，不走浏览器。 -->
+        <package android:name="com.tencent.mobileqq" />
+        <package android:name="com.tencent.tim" />
+        <!-- MT 管理器：手动安装插件时优先调它的文件选取页，
+             resolveActivity 要先能"看见"这两个包才能解析到。 -->
+        <package android:name="bin.mt.plus" />
+        <package android:name="bin.mt.plus.canary" />
+    </queries>
+
+    <!--
+        ==========================================================================
+        组件清单的取舍（改动这里之前请先读完）
+        ==========================================================================
+
+        用户报告"按住桌面图标 → 移除，桌面像重启一样、特别卡，有时候根本移除不掉"。
+        移除图标时桌面会重新解析我们这个包的 MAIN/LAUNCHER 组件，**这一步可能把
+        我们的进程拉起来**。所以这里的原则是：让别的进程"能看见我们"的入口越少越好，
+        一个都不多留。具体：
+
+        1. **启动入口只有一个**：下面只有 MainActivity 带
+           action.MAIN + category.LAUNCHER。以前为了"换桌面图标"挂过四个
+           activity-alias（LauncherGreen/Blue/Purple/Orange），已经全部删掉，
+           连同用到它们的 AppIconSwitcher 一起删了 —— 只要 manifest 里存在多个
+           启动入口，桌面在移除图标时就必须多做一次"这个包里还有没有别的入口"
+           的判断，组件状态的任何读写都会让桌面重新枚举一遍启动项。
+
+           **"移除"不等于卸载**：小米澎湃的「长按图标 → 移除」是把这一个组件
+           置成 disabled，应用和数据都还在 —— 只是桌面上没有入口了。
+           应用内**不再提供任何隐藏/恢复图标的入口**：那个"隐藏桌面图标"按钮
+           曾经把用户彻底关在应用外面（桌面没入口、系统设置里也找不到启动它的
+           地方），已经连同实现整个删掉。所以这里的原则就一条 ——
+           只管好"入口只有一个"，不去读写组件状态。
+           "图标没了之后怎么进应用"由桌面小组件兜底：点组件主体打开应用
+           （见 widget/RemoteWidgetProvider.kt 的 ACTION_OPEN）。
+
+        2. **没有 android:process**：所有组件都跑在默认进程里。声明独立进程会让
+           系统在解析组件时多起一个进程，正是我们要避免的那种"被顺手拉起来"。
+
+        3. **库带进来的、需要额外收紧的组件**：
+           - `androidx.room.MultiInstanceInvalidationService`：room-runtime 自动
+             声明，而且带 `android:directBootAware="true"` —— 意味着**用户解锁之前**
+             系统就可以实例化它，进而把我们的 Application 拉起来。我们没开
+             Room 的多实例失效（AppDatabase 里没有 enableMultiInstanceInvalidation），
+             这个服务根本用不到，所以把 directBootAware 去掉。
+           - `androidx.startup.InitializationProvider`：androidx.startup 会在
+             ContentProvider.onCreate 里跑一串 Initializer。其中
+             `EmojiCompatInitializer`（本项目不用 emoji2）和
+             `ProcessLifecycleInitializer`（本项目的界面状态都在 Compose/VM 里，
+             没读 ProcessLifecycleOwner）都不需要，直接摘掉：
+             ContentProvider 的实例化同样会把进程拉起来。
+             `ProfileInstallerInitializer` 保留 —— 它是纯后台投递，
+             且关掉会影响 ART 的 profile 安装、拖慢以后的启动。
+
+        4. **导出的组件只有两个，都是必需的**：
+           - MainActivity：不导出就没有桌面图标；
+           - `ProfileInstallReceiver`（库自带）：带
+             `android:permission="android.permission.DUMP"`，只有 shell / 系统能发。
+           其余（两个前台服务、FileProvider）都是 `exported="false"`。
+
+        5. **刻意不动的几项**（说明理由，免得下次被当成漏改）：
+           - `allowBackup="true"`：没有声明 backup rules，走系统默认规则；
+             关掉它会改变用户可见行为（换机不再恢复数据），不属于本次问题范围。
+           - `usesCleartextTraffic="true"`：插件源允许 http，关掉会废掉一部分源。
+           - `extractNativeLibs`：不声明，交给构建默认值
+             （当前默认就是 false，即直接从 APK 映射 .so，启动更快）；
+             显式打开反而会把 .so 解压到 data 分区、让安装和启动更慢。
+           - 没有 `largeHeap`：扫描/刮削都是流式处理，不需要更大的堆；
+             开着只会让系统更倾向于先杀别的应用（包括桌面）。
+    -->
+
+    <application
+        android:name=".App"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:requestLegacyExternalStorage="true"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AudioMeta"
+        android:usesCleartextTraffic="true">
+
+        <!-- 唯一的启动入口。见上面第 1 条。 -->
+        <activity
+            android:name=".MainActivity"
+            android:enabled="true"
+            android:exported="true"
+            android:theme="@style/Theme.AudioMeta">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".domain.usecase.ScrapeService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- 曲库扫描前台服务：所有扫描入口（设置页重新扫描、引导页首次扫描、
+             启动时后台补全）都经由它启动。此前漏了这条声明，
+             startForegroundService 会直接抛 "Service not registered"，
+             表现为"扫描永远 0 个文件"。 -->
+        <service
+            android:name=".media.scan.ScanService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- 遥控连接的前台保活服务：连接本身仍是进程级单例，这里只把进程钉住，
+             并在网络恢复时立刻触发重连。通知是 LOW 重要性的静音状态条，
+             不是 MediaSession/MediaStyle，也没有播放控制。 -->
+        <service
+            android:name=".remote.RemoteControlService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- 只用于"把文件交给别的应用"，不对外暴露目录。见 xml/file_paths。 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- 没开 Room 多实例失效，用不到它；去掉 directBootAware（见上面第 3 条）。 -->
+        <service
+            android:name="androidx.room.MultiInstanceInvalidationService"
+            android:directBootAware="false"
+            android:exported="false"
+            tools:replace="android:directBootAware" />
+
+        <!--
+            只留 ProfileInstaller：其余两个 Initializer 都不需要（见上面第 3 条）。
+            tools:node="remove" 是按 metadata 的 name 精确摘除，不是整块端掉。
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                tools:node="remove" />
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                tools:node="remove" />
+        </provider>
+
+        <!--
+            桌面小组件：显示电脑上播放的内容并遥控。
+
+            **四种排版 = 四条独立组件**。系统是照着 manifest 找 provider 的，
+            一个 receiver 对应一种排版，所以桌面的「添加小组件」列表里会分别列出
+            四条（名字与描述见 res/values/widget.xml）。它们共用 widget 包里的
+            AudioMetaWidgetProvider 基类，差异只有各自的 initialLayout
+            （在 res/xml/widget_*_info.xml 里）。
+
+            `RemoteWidgetProvider` 这个类名是**故意保留**的：桌面上已经放着的老
+            组件实例在系统里记的就是 `ComponentName(包名, .widget.RemoteWidgetProvider)`，
+            类名一删那块组件就会显示"加载失败"、用户只能删了重加。现在它是
+            "卡片"那个子类，旧实例升级后自动变成新卡片布局。
+
+            exported="false" + 显式 intent-filter：targetSdk 34 下组件 receiver
+            必须声明 exported，而它只接收系统广播和我们自己发的点击动作，
+            不需要对外暴露。点击动作（TOGGLE/NEXT/PREV/REFRESH/OPEN）写进 filter，
+            是为了"这个组件会收到哪些动作"一眼可查；PendingIntent 用的是
+            `Intent(context, 具体子类)` 这样的**显式** intent，所以四个 receiver
+            声明同一批动作也不会互相串台（点卡片上的播放键，只有卡片会收到）。
+        -->
+        <receiver
+            android:name=".widget.RemoteWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_card_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.audiometa.app.widget.TOGGLE" />
+                <action android:name="com.audiometa.app.widget.NEXT" />
+                <action android:name="com.audiometa.app.widget.PREV" />
+                <action android:name="com.audiometa.app.widget.REFRESH" />
+                <action android:name="com.audiometa.app.widget.OPEN" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_card_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetImmersiveProvider"
+            android:exported="false"
+            android:label="@string/widget_immersive_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.audiometa.app.widget.TOGGLE" />
+                <action android:name="com.audiometa.app.widget.NEXT" />
+                <action android:name="com.audiometa.app.widget.PREV" />
+                <action android:name="com.audiometa.app.widget.REFRESH" />
+                <action android:name="com.audiometa.app.widget.OPEN" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_immersive_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetCompactProvider"
+            android:exported="false"
+            android:label="@string/widget_compact_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.audiometa.app.widget.TOGGLE" />
+                <action android:name="com.audiometa.app.widget.NEXT" />
+                <action android:name="com.audiometa.app.widget.PREV" />
+                <action android:name="com.audiometa.app.widget.REFRESH" />
+                <action android:name="com.audiometa.app.widget.OPEN" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_compact_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetLyricsProvider"
+            android:exported="false"
+            android:label="@string/widget_lyrics_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.audiometa.app.widget.TOGGLE" />
+                <action android:name="com.audiometa.app.widget.NEXT" />
+                <action android:name="com.audiometa.app.widget.PREV" />
+                <action android:name="com.audiometa.app.widget.REFRESH" />
+                <action android:name="com.audiometa.app.widget.OPEN" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_lyrics_info" />
+        </receiver>
+    </application>
+</manifest>

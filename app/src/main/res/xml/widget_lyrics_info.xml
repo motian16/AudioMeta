@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  歌词组件（WidgetLyricsProvider）的尺寸元数据。
+
+  默认 **4x2**：歌词是主角，一行歌词要放得下才有意义（2 列宽时中文歌词会被
+  截成几个字），所以默认就宽一些。高度 2 格起步才能同时容下当前行、译文、
+  进度条和三个按钮；不够高时代码只留当前行。
+
+  minResizeWidth 给到 180dp：允许用户缩窄一点，但别缩到歌词看不见。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_lyrics"
+    android:previewLayout="@layout/widget_lyrics"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_lyrics_description" />

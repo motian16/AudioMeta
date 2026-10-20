@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  桌面小组件 · 卡片（WidgetCardProvider）。
+
+  为什么长这样：
+  1. 上半部分是 `layout_weight="1"` —— 部件被拉大时，多出来的高度**全部**给
+     封面和文字，而不是在底部留一块空白（用户抱怨的"放到最大还有空白区域"）。
+  2. 按钮行用 weight 平分整宽：48 / 56dp 只是**最小**高度，宽度跟着部件一起变宽，
+     手指点得中（用户反复说"控制按钮太小"）。
+  3. 进度条自带一行，宽度 weight=1；本机曲库匹配不到时长时整行 GONE
+     （见 WidgetProviders.kt 的 showProgress）。
+
+  ⚠ 四张布局的 id 必须完全一致：RemoteViews 里"给 id=xxx 设置文字"这个动作是在
+  **桌面进程** inflate 时才 findViewById 的，某个 id 在这张布局里不存在就会变成
+  "Problem loading widget"。所以本布局把卡片用不到的歌词行也声明了出来 ——
+  宽高 0、GONE，永远不显示。加 id 时四张布局一起加。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="8dp">
+
+    <!-- 上：封面 + 文字。weight=1 吃掉所有剩余高度 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/widget_cover"
+            android:layout_width="72dp"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/widget_cover_placeholder"
+            android:contentDescription="@string/widget_cover" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="10dp">
+
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_text_primary"
+                android:text="@string/widget_disconnected" />
+
+            <TextView
+                android:id="@+id/widget_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="12sp"
+                android:textColor="@color/widget_text_secondary"
+                android:layout_marginTop="3dp"
+                android:text="" />
+
+            <!-- 够大（同时够宽够高）时才由代码显示出来的歌词当前行 -->
+            <TextView
+                android:id="@+id/widget_lyric_current"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="12sp"
+                android:textColor="@color/widget_accent"
+                android:layout_marginTop="3dp"
+                android:text="" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 进度条：位置来自 PC，总时长来自本机曲库匹配 -->
+    <LinearLayout
+        android:id="@+id/widget_progress_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="0dp"
+            android:layout_height="6dp"
+            android:layout_weight="1"
+            android:minHeight="6dp"
+            android:maxHeight="6dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress"
+            android:contentDescription="@string/widget_progress_description" />
+
+        <TextView
+            android:id="@+id/widget_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="10sp"
+            android:textColor="@color/widget_text_secondary"
+            android:text="" />
+    </LinearLayout>
+
+    <!-- 控制按钮：上一首 / 播放暂停 / 下一首，weight 1:2:1 平分整宽 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="6dp">
+
+        <ImageView
+            android:id="@+id/widget_prev"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:padding="6dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_prev"
+            android:contentDescription="@string/widget_prev"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+        <ImageView
+            android:id="@+id/widget_toggle"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="2"
+            android:padding="6dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_play"
+            android:contentDescription="@string/widget_toggle"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+        <ImageView
+            android:id="@+id/widget_next"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:padding="6dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_next"
+            android:contentDescription="@string/widget_next"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <!-- 占位（id 契约，见文件头注释）：卡片风格永远不显示这三行 -->
+    <TextView
+        android:id="@+id/widget_lyric_prev"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:text="" />
+
+    <TextView
+        android:id="@+id/widget_lyric_translation"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:text="" />
+
+    <TextView
+        android:id="@+id/widget_lyric_next"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:text="" />
+</LinearLayout>

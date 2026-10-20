@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  封面占位图：本机曲库里匹配不到这首歌时显示。
+
+  一个圆角方块 + 中间一个音符。RemoteViews 不支持 vector 的 tint/drawable 组合，
+  所以这里用 layer-list 把形状和音符叠起来，任何 ROM 都能画出来。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/widget_cover_placeholder_bg" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item
+        android:drawable="@drawable/ic_widget_note"
+        android:gravity="center" />
+</layer-list>

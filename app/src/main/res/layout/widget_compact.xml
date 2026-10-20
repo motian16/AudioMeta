@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  桌面小组件 · 极简（WidgetCompactProvider）。
+
+  为什么长这样：
+  1. 默认就是 **2x1**：一行放"小封面 + 曲名 + 播放键"，背景几乎透明、不挡壁纸。
+     所以内容行用 `layout_weight="1"`，高度全给它。
+  2. 上一首 / 下一首和进度条**只在这块被拉宽之后**才由代码显示
+     （见 WidgetProviders.kt 的 applyLayoutRules）。1 格高的部件塞不下进度条，
+     硬塞只会把曲名挤没 —— 这是"小尺寸只显示一部分，大尺寸铺满"的意思。
+  3. 三个按钮的高度是 `match_parent` + `scaleType="centerInside"`：1 格高时行高
+     可能只有 40dp，写死 56dp 会被裁掉；match_parent 让它"能多大就多大"，
+     centerInside 保证图标不会被拉变形、也不会在大尺寸下变成一只巨大的图标。
+
+  ⚠ 布局 id 契约见 widget_card.xml 的注释：本布局同样声明了全部 14 个 id。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background_minimal"
+    android:padding="6dp">
+
+    <!-- 主行：封面 + 文字 + 控制。weight=1 吃掉所有剩余高度 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/widget_cover"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center_vertical"
+            android:scaleType="centerCrop"
+            android:src="@drawable/widget_cover_placeholder"
+            android:contentDescription="@string/widget_cover" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="10dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_text_primary"
+                android:text="@string/widget_disconnected" />
+
+            <TextView
+                android:id="@+id/widget_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="11sp"
+                android:textColor="@color/widget_text_secondary"
+                android:layout_marginTop="2dp"
+                android:text="" />
+
+            <TextView
+                android:id="@+id/widget_lyric_current"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="11sp"
+                android:textColor="@color/widget_accent"
+                android:layout_marginTop="2dp"
+                android:text="" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/widget_prev"
+            android:layout_width="44dp"
+            android:layout_height="match_parent"
+            android:padding="4dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_widget_prev"
+            android:contentDescription="@string/widget_prev"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+        <ImageView
+            android:id="@+id/widget_toggle"
+            android:layout_width="56dp"
+            android:layout_height="match_parent"
+            android:padding="4dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_widget_play"
+            android:contentDescription="@string/widget_toggle"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+        <ImageView
+            android:id="@+id/widget_next"
+            android:layout_width="44dp"
+            android:layout_height="match_parent"
+            android:padding="4dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_widget_next"
+            android:contentDescription="@string/widget_next"
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <!-- 进度条：默认藏起来（2x1 放不下），拉宽之后由代码显示 -->
+    <LinearLayout
+        android:id="@+id/widget_progress_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="4dp"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="0dp"
+            android:layout_height="6dp"
+            android:layout_weight="1"
+            android:minHeight="6dp"
+            android:maxHeight="6dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress"
+            android:contentDescription="@string/widget_progress_description" />
+
+        <TextView
+            android:id="@+id/widget_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="10sp"
+            android:textColor="@color/widget_text_secondary"
+            android:text="" />
+    </LinearLayout>
+
+    <!-- 占位（id 契约）：极简风格只显示当前歌词行，这三行永远不显示 -->
+    <TextView
+        android:id="@+id/widget_lyric_prev"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:text="" />
+
+    <TextView
+        android:id="@+id/widget_lyric_translation"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:text="" />
+
+    <TextView
+        android:id="@+id/widget_lyric_next"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        android:text="" />
+</LinearLayout>

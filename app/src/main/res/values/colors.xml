@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      启动图标的底色：**暗色**，直接取主题里的 Ink（#FF12141A），
+      这样桌面上那张图和应用本身的深色底是同一个颜色。
+
+      这里只剩一个颜色了：以前为了配合已删除的"换桌面图标"做过
+      green/blue/purple/orange 四个换色版本，那几个 xml 和颜色一并删掉。
+    -->
+    <color name="ic_launcher_background">#FF12141A</color>
+</resources>

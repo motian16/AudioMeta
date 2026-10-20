@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  桌面小组件 · 沉浸封面（WidgetImmersiveProvider）。
+
+  为什么长这样：
+  1. 封面 `match_parent` 铺满整块，所以**不存在**"放到最大还有空白"的问题 ——
+     部件多大封面就多大。
+  2. 文字与按钮用一个 `layout_gravity="bottom"` 的面板压在**底部渐变**上：
+     封面颜色不可预测，没有这层渐变白字就会在浅色封面上消失。
+     （渐变方向见 drawable/widget_scrim.xml 的说明。）
+  3. 高度够（tall）时，面板最上面再补一行当前歌词；不够高就只留标题。
+
+  ⚠ 布局 id 契约见 widget_card.xml 的注释：本布局同样声明了全部 14 个 id。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background">
+
+    <!-- 封面铺满；匹配不到时它是空的，底下那层背景色就露出来 -->
+    <ImageView
+        android:id="@+id/widget_cover"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/widget_cover" />
+
+    <!-- 底部渐变：白字压在浅色封面上也看得清 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/widget_scrim" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- 够高时才由代码显示：压在曲名上方的一行当前歌词 -->
+        <TextView
+            android:id="@+id/widget_lyric_current"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="13sp"
+            android:textColor="@color/widget_accent"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_text_primary"
+            android:text="@string/widget_disconnected" />
+
+        <TextView
+            android:id="@+id/widget_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textSize="12sp"
+            android:textColor="@color/widget_text_secondary"
+            android:layout_marginTop="2dp"
+            android:text="" />
+
+        <LinearLayout
+            android:id="@+id/widget_progress_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <ProgressBar
+                android:id="@+id/widget_progress"
+                style="@android:style/Widget.ProgressBar.Horizontal"
+                android:layout_width="0dp"
+                android:layout_height="6dp"
+                android:layout_weight="1"
+                android:minHeight="6dp"
+                android:maxHeight="6dp"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/widget_progress"
+                android:contentDescription="@string/widget_progress_description" />
+
+            <TextView
+                android:id="@+id/widget_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="10sp"
+                android:textColor="@color/widget_text_secondary"
+                android:text="" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <ImageView
+                android:id="@+id/widget_prev"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_widget_prev"
+                android:contentDescription="@string/widget_prev"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+            <ImageView
+                android:id="@+id/widget_toggle"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="2"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_widget_play"
+                android:contentDescription="@string/widget_toggle"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+            <ImageView
+                android:id="@+id/widget_next"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_widget_next"
+                android:contentDescription="@string/widget_next"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
+        </LinearLayout>
+
+        <!-- 占位（id 契约）：沉浸风格只显示当前歌词行，这三行永远不显示 -->
+        <TextView
+            android:id="@+id/widget_lyric_prev"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/widget_lyric_translation"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/widget_lyric_next"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            android:text="" />
+    </LinearLayout>
+</FrameLayout>

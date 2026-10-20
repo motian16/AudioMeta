@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      窗口背景只在 Compose 第一帧之前可见。它必须和应用的首屏配色一致，
+      否则会出现"深色窗口 + 浅色文字色"这种看不见字的组合。
+      应用默认深色，这里就固定成深色窗口背景；Compose 内容会自己铺满背景。
+    -->
+    <style name="Theme.AudioMeta" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#12141A</item>
+        <item name="android:navigationBarColor">#12141A</item>
+        <item name="android:windowBackground">#12141A</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

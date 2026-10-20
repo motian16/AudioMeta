@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  沉浸封面组件（WidgetImmersiveProvider）的尺寸元数据。
+
+  默认 **2x2**：封面铺满，底部的曲名 / 进度条 / 按钮压在渐变上。
+  封面本身是 match_parent，所以这个组件没有"最小放不下"的元素，
+  缩到多小都只是封面变小；拉到 4x4 也不会留空白。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_immersive"
+    android:previewLayout="@layout/widget_immersive"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_immersive_description" />

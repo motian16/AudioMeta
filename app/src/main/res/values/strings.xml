@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AudioMeta</string>
+    <string name="scan_channel_name">扫描</string>
+    <string name="scrape_channel_name">刮削</string>
+    <string name="scan_channel_desc">音频库扫描进度</string>
+    <string name="scrape_channel_desc">元数据刮削进度</string>
+    <string name="remote_channel_name">远程控制</string>
+    <string name="remote_channel_desc">保持与电脑的连接，后台不被系统清理</string>
+</resources>

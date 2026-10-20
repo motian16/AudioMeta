@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  圆形启动图标（manifest 的 android:roundIcon）。
+
+  自适应图标本来就由系统按桌面遮罩切形状，所以这里和 ic_launcher 完全一样：
+  背景暗色、前景是用户选的白色音符（带 Android 13+ 的单色主题图标层）。
+  分成两个资源只是因为 manifest 里 icon / roundIcon 要指向两个不同的名字。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小组件的进度条。
+
+  用 layer-list 自己画，而不是拿系统的 progressBarStyleHorizontal：
+  系统那套的粗细和颜色由 ROM 主题决定，四张布局在四家桌面上会长得不一样。
+  这里写死 6dp 高、圆角、"已播部分"用强调色，跨 ROM 一致。
+
+  `@android:id/background` / `@android:id/progress` 这两个 id 是 ProgressBar
+  认的（它在 drawable 里找这两个槽位来画底槽和进度），不能改名。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="3dp" />
+            <solid android:color="@color/widget_progress_background" />
+            <size android:height="6dp" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="3dp" />
+                <solid android:color="@color/widget_accent" />
+                <size android:height="6dp" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

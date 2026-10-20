@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小组件背景。
+
+  用系统自带的半透明表面色 + 圆角，不写死具体颜色 ——
+  这样在浅色/深色主题和各家 ROM 的换肤下都不会变成一块突兀的白或黑。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_background" />
+    <corners android:radius="18dp" />
+</shape>

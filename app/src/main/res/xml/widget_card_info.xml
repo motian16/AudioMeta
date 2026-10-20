@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  卡片组件（RemoteWidgetProvider）的尺寸元数据。
+
+  minWidth/minHeight 是"至少占多少 dp 才能放下 2x2 格子"（桌面按 70n-30 折算），
+  targetCellWidth/Height 是 Android 12+ 的默认格子数：**2x2**。
+  拉大之后代码会把上一首 / 下一首补出来（见 RemoteWidgetProvider.kt 里的 applyLayoutRules）。
+
+  minResizeHeight 也写 110dp（2 格）：这张布局是"文字行 + 进度条 + 按钮行"三行竖排，
+  压到 1 格高（60~100dp）时三行排不下，曲名会被挤成半行。宁可不让缩到那么小。
+
+  previewLayout 让桌面在「添加小组件」列表里直接画出真实样子（Android 12+），
+  比一个统一的应用图标好认 —— 四个组件长得完全不一样，预览是关键。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_card"
+    android:previewLayout="@layout/widget_card"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_card_description" />

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  极简风格的背景：比默认那张更透、圆角更小。
+
+  极简风格刻意"不像一张卡片"：不要大圆角的重底色，让桌面的壁纸透上来，
+  只留一层薄薄的深色保证文字可读。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_background_minimal" />
+    <corners android:radius="12dp" />
+</shape>

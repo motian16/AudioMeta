@@ -1,0 +1,28 @@
+.gradle/
+.kotlin/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
+*.aab
+*.idsig
+output-metadata.json
+template-plugin.zip
+*.hprof
+*.log
+
+# 本机签名材料，不能进仓库
+keystore.properties
+keystore/
+*.jks
+*.keystore
+
+# 开发机上的图标生成/发布脚本，不属于 App 源码
+dev-tools/
+publish-release.ps1
+icon.png

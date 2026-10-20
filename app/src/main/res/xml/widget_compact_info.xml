@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  极简组件（WidgetCompactProvider）的尺寸元数据。
+
+  默认 **2x1**：1 格高只有"小封面 + 曲名 + 播放键"。
+  minHeight 写 40dp 是"1 格高"的折算值（70-30），它决定了桌面默认给几格；
+  真放到 1 格高时进度条放不下，代码会把进度条和上一首 / 下一首收起来，
+  拉宽（4 列起）之后再补出来 —— 这就是"小尺寸只显示一部分"。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_compact"
+    android:previewLayout="@layout/widget_compact"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_compact_description" />

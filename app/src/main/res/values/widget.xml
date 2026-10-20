@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小组件用到的颜色与文案。单独一份，避免和 App 主题里的资源名打架。 -->
+<resources>
+    <!-- 背景用半透明黑，绝大多数桌面壁纸下都看得清 -->
+    <color name="widget_background">#E6202124</color>
+    <!-- 极简风格：更透，让壁纸透上来 -->
+    <color name="widget_background_minimal">#8C1A1B1E</color>
+    <!-- 匹配不到本机封面时的占位底色 -->
+    <color name="widget_cover_placeholder_bg">#33FFFFFF</color>
+    <!-- 进度条的底槽（未播部分） -->
+    <color name="widget_progress_background">#33FFFFFF</color>
+    <color name="widget_text_primary">#FFFFFFFF</color>
+    <color name="widget_text_secondary">#B3FFFFFF</color>
+    <color name="widget_accent">#FF7FD1AE</color>
+
+    <!--
+      四种排版各自的组件名与描述。
+
+      这两个值会显示在桌面的「添加小组件」列表里 —— 四个组件就是四条，
+      用户是靠 label 分辨它们的，所以名字里必须带风格（卡片 / 沉浸 / 极简 / 歌词）。
+      description 从 Android 12 起显示在组件名下面一行。
+    -->
+    <string name="widget_card_label">AudioMeta 遥控 · 卡片</string>
+    <string name="widget_card_description">左边封面、右边曲名，进度条加一排大按钮。信息最全，拉宽后补出上一首 / 下一首。</string>
+
+    <string name="widget_immersive_label">AudioMeta 遥控 · 沉浸封面</string>
+    <string name="widget_immersive_description">整块铺满专辑封面，曲名、进度条与按钮压在底部渐变上。够高时还能压一行歌词。</string>
+
+    <string name="widget_compact_label">AudioMeta 遥控 · 极简</string>
+    <string name="widget_compact_description">最小 2x1：小封面 + 曲名 + 播放键，背景几乎透明。拉宽后补上进度条与上一首 / 下一首。</string>
+
+    <string name="widget_lyrics_label">AudioMeta 遥控 · 歌词</string>
+    <string name="widget_lyrics_description">歌词大字居中（含原文 / 译文），下面是进度条与三个控制按钮。默认 4x2。</string>
+
+    <string name="widget_disconnected">未连接</string>
+    <string name="widget_idle">电脑空闲</string>
+    <string name="widget_no_lyrics">暂无歌词</string>
+    <string name="widget_toggle">播放或暂停</string>
+    <string name="widget_prev">上一首</string>
+    <string name="widget_next">下一首</string>
+    <string name="widget_cover">专辑封面</string>
+    <string name="widget_progress_description">播放进度</string>
+</resources>

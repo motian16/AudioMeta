@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  启动图标（自适应图标）。minSdk 26，所以这一份就够，不需要各密度的 png。
+
+  - 背景：**暗色**（@color/ic_launcher_background，取自主题里的 Ink #12141A）；
+  - 前景：用户选定的白色音符，见 @drawable/ic_launcher_foreground ——
+    已经按"安全圆半径 33"缩放并居中，圆形 / 方形 / 水滴形遮罩都不会裁到；
+  - monochrome：Android 13+ 的"主题图标"单色层。形状和前景一样，
+    系统只取它的 alpha 再自己上色，所以直接复用同一份矢量。
+    老系统（26～32）会忽略这个标签，这是官方推荐的写法。
+
+  历史：以前为了"换桌面图标"做过四个换色版本
+  （ic_launcher_green / blue / purple / orange），配合已删除的 AppIconSwitcher。
+  现在连那几个 xml、它们用的颜色和旧的位图前景一起删了 —— 启动入口只留这一个。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
