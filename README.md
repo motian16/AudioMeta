@@ -40,6 +40,8 @@ AudioMeta 直接读写手机里的音频文件，适合已经整理好曲库、�
 ./gradlew :app:testDebugUnitTest
 ```
 
+部分测试会读取同机 checkout 的 `MetaAudio-Repo` 订阅规则（本仓库不包含插件和规则），因此干净克隆里直接跑测试会缺少测试夹具；GitHub Actions 的发行构建只执行 `assembleRelease`。
+
 ## 发布
 
 `.github/workflows/release.yml` 支持手动触发：
